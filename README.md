@@ -38,6 +38,32 @@ Kept apart from `Money` deliberately — formatting is arithmetic and has no
 opinion about markup, and once the two share a class somebody escapes twice or
 not at all.
 
+
+## Rates
+
+A tax rate, a commission, a discount. Each is a number that means one of two
+entirely different things, and the number cannot say which — `20` is twenty
+percent or twenty pounds, and on a £10 order that is the difference between £8
+and £0.
+
+So a rate is the pair, and nothing here accepts a bare number and guesses:
+
+```php
+use ArrayPress\\Money\\Rate;
+
+Rate::format( 20, 'percent' );              // '20%'
+Rate::format( 20, 'flat', 'USD' );          // '$0.20'
+
+Rate::applied_to( 1000, 20, 'percent' );    // 200
+Rate::applied_to( 1000, 20, 'flat' );       // 20
+```
+
+An unrecognised kind reads as money, deliberately: showing `20` where `£0.20`
+belongs is a display bug, showing `20%` where `£0.20` belongs is a pricing one.
+
+Deductions are bounded by the amount and never negative, and percentages round
+rather than truncate — 8.875% of £19.99 truncated loses a penny on every line.
+
 ## Requirements
 
 PHP 8.3+ and WordPress (`ext-intl` optional, for locale-aware formatting)
