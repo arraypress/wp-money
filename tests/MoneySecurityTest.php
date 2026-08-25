@@ -33,7 +33,7 @@ final class MoneySecurityTest extends TestCase {
 		$this->assertSame( '', Currencies::symbol( $code ) );
 		$this->assertSame( '', Currencies::name( $code ) );
 
-		foreach ( array( Money::format( 100, $code ), Money::format( 100, $code, array( 'symbol' => false, 'code' => true ) ) ) as $rendered ) {
+		foreach ( array( Money::format( 100, array( 'currency' => $code ) ), Money::format( 100, array( 'currency' => $code, 'symbol' => false, 'code' => true ) ) ) as $rendered ) {
 			$this->assertStringNotContainsString( '<', $rendered );
 			$this->assertStringNotContainsString( '"', $rendered );
 			$this->assertSame( '1.00', trim( $rendered ) );
@@ -51,7 +51,6 @@ final class MoneySecurityTest extends TestCase {
 			'too long'     => array( 'USDD' ),
 			'symbol'       => array( '€' ),
 			'digits'       => array( '123' ),
-			'empty'        => array( '' ),
 			'null byte'    => array( "US\x00D" ),
 			'entity'       => array( '&lt;b&gt;' ),
 		);
@@ -64,13 +63,13 @@ final class MoneySecurityTest extends TestCase {
 	public function test_a_plausible_unknown_code_is_kept(): void {
 		$this->assertSame( 'XYZ', Currencies::sanitize_code( 'xyz' ) );
 		$this->assertSame( 'XYZ', Currencies::symbol( 'XYZ' ) );
-		$this->assertSame( '1.00 XYZ', Money::format( 100, 'xyz', array( 'symbol' => false, 'code' => true ) ) );
+		$this->assertSame( '1.00 XYZ', Money::format( 100, array( 'currency' => 'xyz', 'symbol' => false, 'code' => true ) ) );
 	}
 
 	public function test_known_codes_are_unaffected(): void {
-		$this->assertSame( '$1.00', Money::format( 100, 'usd' ) );
-		$this->assertSame( '1.00 USD', Money::format( 100, 'USD', array( 'symbol' => false, 'code' => true ) ) );
-		$this->assertSame( '¥1,000', Money::format( 1000, 'JPY' ) );
+		$this->assertSame( '$1.00', Money::format( 100, array( 'currency' => 'usd' ) ) );
+		$this->assertSame( '1.00 USD', Money::format( 100, array( 'currency' => 'USD', 'symbol' => false, 'code' => true ) ) );
+		$this->assertSame( '¥1,000', Money::format( 1000, array( 'currency' => 'JPY' ) ) );
 	}
 
 	/* ─── Amounts ───────────────────────────────────────────────────── */
@@ -128,5 +127,18 @@ final class MoneySecurityTest extends TestCase {
 				$this->addToAssertionCount( 1 );
 			}
 		}
+	}
+
+	/**
+	 * An empty currency means the store's, not an unknown one.
+	 *
+	 * It used to mean neither -- the code was passed through empty and the
+	 * amount rendered with no symbol at all. Now that `currency` is an option
+	 * with a default, leaving it out is how a caller says "the usual one",
+	 * which is the commonest call in the library.
+	 */
+	public function test_an_empty_currency_is_the_stores(): void {
+		$this->assertSame( Money::format( 100 ), Money::format( 100, array( 'currency' => '' ) ) );
+		$this->assertSame( '$1.00', Money::format( 100, array( 'currency' => '' ) ) );
 	}
 }

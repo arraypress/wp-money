@@ -21,24 +21,6 @@ Twenty of the 136 currencies here are not two-decimal. Getting that wrong is not
 - 🌐 **Locale formatting** — via ext-intl when present, with a sensible fallback when not.
 
 
-## Rendering
-
-`Money::format()` returns text. `Render` puts it in a page, escaping exactly
-once:
-
-```php
-use ArrayPress\\Money\\Render;
-
-echo Render::amount( 4999, 'USD' );              // <span class="price">$49.99</span>
-echo Render::amount_with_code( 4999, 'AUD' );    // names the currency, for
-                                                 // pages showing more than one
-```
-
-Kept apart from `Money` deliberately — formatting is arithmetic and has no
-opinion about markup, and once the two share a class somebody escapes twice or
-not at all.
-
-
 ## Rates
 
 A tax rate, a commission, a discount. Each is a number that means one of two
@@ -65,94 +47,72 @@ Deductions are bounded by the amount and never negative, and percentages round
 rather than truncate — 8.875% of £19.99 truncated loses a penny on every line.
 
 
-## Global functions
 
-The surface a plugin calls. Every one falls back to the store's currency, so a
-single-currency shop never repeats itself:
+## Using it
 
-```php
-format_money( 4999 );                          // '$49.99'
-format_money( 1000, 'JPY' );                   // '¥1,000'
-format_money_with_code( 4999 );                // '49.99 USD'
-format_money_recurring( 999, 'month' );        // '$9.99/mo'
-format_money_recurring( 999, 'month', 3 );     // '$9.99 every 3 months'
-render_money( 4999 );                          // '<span class="price">$49.99</span>'
-
-sanitize_money( '$1,999.00' );                 // 199900
-money_input_value( 199900 );                   // '1999.00' — round-trips
-money_to_float( 4999 );                        // 49.99, for a gateway only
-
-currency_symbol();                             // '$'
-currency_decimals( 'JPY' );                    // 0
-is_supported_currency( 'ZZZ' );                // false
-currency_options();                            // for a select
-format_rate( 20, 'percent' );                  // '20%'
-```
-
-The store's currency comes from a filter:
+Two functions cover almost everything, and both take the same options array:
 
 ```php
-add_filter( 'money_currency', fn() => 'GBP' );
-```
+format_money( 4999 );                                  // '$49.99'
+format_money( 1000, [ 'currency' => 'JPY' ] );         // '¥1,000'
+format_money( 4999, [ 'code' => true ] );              // '$49.99 USD'
+format_money( 999,  [ 'interval' => 'month' ] );       // '$9.99/mo'
+format_money( 999,  [ 'interval' => 'month', 'interval_count' => 3 ] );
+                                                       // '$9.99 every 3 months'
 
-A filter returning something unsupported falls back to USD rather than
-formatting every price on the site with no symbol and two decimals.
-
-
-## Formatter options
-
-One formatter, with options. There used to be a method per combination —
-`format()`, `format_with_code()`, `format_localized()`, `decimal()`,
-`input_value()` — and adding subscriptions doubled it, because every one wanted
-a recurring twin.
-
-```php
-Money::format( 199900, 'USD' );                                   // '$1,999.00'
-Money::format( 199900, 'USD', [ 'symbol' => false ] );            // '1,999.00'
-Money::format( 199900, 'USD', [ 'code' => true ] );               // '$1,999.00 USD'
-Money::format( 199900, 'USD', [ 'separators' => false ] );        // '$1999.00'
-Money::format( 123456, 'EUR', [ 'locale' => 'fr_FR' ] );          // '1 234,56 €'
+render_price( 4999 );                                  // <span class="price">$49.99</span>
+render_price( 1999, [ 'compare_at' => 2999 ] );        // struck through, see below
 ```
 
 | Key | Default | What it does |
 |-----|---------|--------------|
+| `currency` | store's | ISO-4217 code |
 | `symbol` | `true` | Show the currency's symbol |
 | `code` | `false` | Name the currency after the amount |
 | `separators` | `true` | Group the thousands |
-| `locale` | `''` | Lay the amount out the way a locale does |
+| `interval` | `''` | `day`, `week`, `month` or `year` |
+| `interval_count` | `1` | How many intervals between charges |
+| `compare_at` | `null` | *(render only)* what it cost before |
+| `class` | `'price'` | *(render only)* wrapper class |
 
-They combine, which is why this is an array and not an enum — an enum would put
-`localized` beside `code` as though you could not want both, and "symbol and
-code" is a real thing an invoice wants.
-
-`Recurring::format()` and `Render::amount()` take the same options and append
-or wrap whatever comes back.
+They combine, which is why this is an array and not an enum — an enum cannot
+express "symbol and code", which an invoice wants.
 
 An option nothing reads raises `_doing_it_wrong()` under `WP_DEBUG`. That is
-the usual objection to configuration arrays answered: a misspelled key is not
-an error in PHP, so it would otherwise do nothing silently and the only symptom
-would be a price that does not look the way it was asked to.
+the usual objection to configuration arrays answered: `compare_at` passed to
+`format_money()` rather than `render_price()` is a plausible thing to write, it
+would otherwise do nothing, and the only symptom would be a sale price
+rendering as an ordinary one.
 
+The other three globals:
+
+```php
+money_currency();                    // the store's code, filterable
+sanitize_money( '$1,999.00' );       // 199900
+money_input_value( 199900 );         // '1999.00' — round-trips through a form
+```
+
+Everything rarer is on the classes: `Currencies::symbol()`, `Money::to_float()`,
+`Money::allocate()`, `Rate::applied_to()`, `Recurring::options()`.
 
 ## Sale prices
 
 ```php
-render_sale_price( 1999, 2999 );
+render_price( 1999, [ 'compare_at' => 2999 ] );
 // <span class="price price--sale">
 //   <del><span class="screen-reader-text">Regular price</span>$29.99</del>
 //   <ins><span class="screen-reader-text">Sale price</span>$19.99</ins>
 // </span>
 
-money_saving_percentage( 1999, 2999 );   // 33 — for the badge
+Money::saving_percentage( 1999, 2999 );   // 33 — for the badge
 ```
 
 `<del>` and `<ins>` rather than spans with classes: that is what the elements
-mean, and it is the only version a screen reader can make sense of. Without
-the hidden labels the two numbers are read out one after another with nothing
-to say which is which, and a struck-through price sounds exactly like the
-price.
+mean, and it is the only version a screen reader can make sense of. Without the
+hidden labels the two numbers are read out one after another with nothing to
+say which is which, and a struck-through price sounds exactly like the price.
 
-A compare-at at or below the amount renders as an ordinary price — striking
+A `compare_at` at or below the amount renders as an ordinary price — striking
 through a number that is the same or smaller reads as an increase, and equal
 prices arrive routinely from a product whose sale has ended.
 
@@ -162,25 +122,8 @@ For a discount rather than a fixed sale price:
 
 ```php
 $sale = $regular - Rate::applied_to( $regular, 20, 'percent' );
-render_sale_price( $sale, $regular );
+render_price( $sale, [ 'compare_at' => $regular ] );
 ```
-
-## Subscriptions
-
-```php
-use ArrayPress\\Money\\Recurring;
-
-Recurring::format( 999, 'USD', 'month' );      // '$9.99/mo'
-Recurring::format( 999, 'USD', 'month', 3 );   // '$9.99 every 3 months'
-Recurring::options();                          // Daily / Weekly / Monthly / Yearly
-```
-
-Two shapes because one does not cover both cases. `/mo` fits beside a price;
-`/3mo` is not something anybody parses on the first attempt.
-
-An interval this library has not heard of is passed through rather than
-refused — a gateway may add one before this does, and `/quarter` beats not
-rendering the price.
 
 ## Requirements
 

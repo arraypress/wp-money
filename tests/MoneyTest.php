@@ -75,7 +75,7 @@ final class MoneyTest extends TestCase {
 
 	#[DataProvider( 'formatting' )]
 	public function test_formatting( int $amount, string $code, string $expected ): void {
-		$this->assertSame( $expected, Money::format( $amount, $code ) );
+		$this->assertSame( $expected, Money::format( $amount, array( 'currency' => $code ) ) );
 	}
 
 	/** @return array<string, array{0: int, 1: string, 2: string}> */
@@ -100,8 +100,8 @@ final class MoneyTest extends TestCase {
 	 * The bug the exponent table exists to prevent, stated directly.
 	 */
 	public function test_zero_decimal_currencies_are_not_divided(): void {
-		$this->assertSame( '¥1,000', Money::format( 1000, 'JPY' ) );
-		$this->assertNotSame( '¥10.00', Money::format( 1000, 'JPY' ) );
+		$this->assertSame( '¥1,000', Money::format( 1000, array( 'currency' => 'JPY' ) ) );
+		$this->assertNotSame( '¥10.00', Money::format( 1000, array( 'currency' => 'JPY' ) ) );
 	}
 
 	public function test_three_decimal_currencies_use_three_places(): void {
@@ -110,18 +110,18 @@ final class MoneyTest extends TestCase {
 	}
 
 	public function test_multi_character_symbols_are_spaced(): void {
-		$this->assertStringContainsString( ' ', Money::format( 1500, 'BHD' ) );
-		$this->assertStringNotContainsString( ' ', Money::format( 4999, 'USD' ) );
+		$this->assertStringContainsString( ' ', Money::format( 1500, array( 'currency' => 'BHD' ) ) );
+		$this->assertStringNotContainsString( ' ', Money::format( 4999, array( 'currency' => 'USD' ) ) );
 	}
 
 	public function test_formatting_with_a_code(): void {
-		$this->assertSame( '49.99 USD', Money::format( 4999, 'USD', array( 'symbol' => false, 'code' => true ) ) );
-		$this->assertSame( '1,000 JPY', Money::format( 1000, 'JPY', array( 'symbol' => false, 'code' => true ) ) );
+		$this->assertSame( '49.99 USD', Money::format( 4999, array( 'currency' => 'USD', 'symbol' => false, 'code' => true ) ) );
+		$this->assertSame( '1,000 JPY', Money::format( 1000, array( 'currency' => 'JPY', 'symbol' => false, 'code' => true ) ) );
 	}
 
 	public function test_input_values_have_no_separators(): void {
-		$this->assertSame( '1234567.89', Money::format( 123456789, 'USD', array( 'symbol' => false, 'separators' => false ) ) );
-		$this->assertSame( '1000', Money::format( 1000, 'JPY', array( 'symbol' => false, 'separators' => false ) ) );
+		$this->assertSame( '1234567.89', Money::format( 123456789, array( 'currency' => 'USD', 'symbol' => false, 'separators' => false ) ) );
+		$this->assertSame( '1000', Money::format( 1000, array( 'currency' => 'JPY', 'symbol' => false, 'separators' => false ) ) );
 	}
 
 
@@ -158,7 +158,7 @@ final class MoneyTest extends TestCase {
 			foreach ( array( 0, 1, 999, 4999, 100000, 123456789 ) as $amount ) {
 				$this->assertSame(
 					$amount,
-					Money::parse( Money::format( $amount, $code, array( 'symbol' => false, 'separators' => false ) ), $code ),
+					Money::parse( Money::format( $amount, array( 'currency' => $code, 'symbol' => false, 'separators' => false ) ), $code ),
 					$code . ' ' . $amount
 				);
 			}

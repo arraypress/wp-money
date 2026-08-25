@@ -9,6 +9,9 @@ declare( strict_types=1 );
 
 namespace ArrayPress\Money\Tests;
 
+use ArrayPress\Money\Currencies;
+use ArrayPress\Money\Money;
+use ArrayPress\Money\Rate;
 use ArrayPress\Money\Recurring;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -45,19 +48,9 @@ final class FunctionsTest extends TestCase {
 			array(
 				'money_currency',
 				'format_money',
-				'format_money_with_code',
-				'format_money_recurring',
-				'render_money',
+												'render_price',
 				'sanitize_money',
-				'money_to_float',
 				'money_input_value',
-				'currency_symbol',
-				'currency_decimals',
-				'is_supported_currency',
-				'currency_options',
-				'format_rate',
-				'render_sale_price',
-				'money_saving_percentage',
 			) as $function
 		) {
 			$this->assertTrue( function_exists( $function ), sprintf( '%s() was never declared.', $function ) );
@@ -83,7 +76,7 @@ final class FunctionsTest extends TestCase {
 	public function test_an_explicit_currency_wins(): void {
 		add_filter( 'money_currency', static fn() => 'GBP' );
 
-		$this->assertSame( '¥1,000', format_money( 1000, 'JPY' ) );
+		$this->assertSame( '¥1,000', format_money( 1000, array( 'currency' => 'JPY' ) ) );
 	}
 
 	/**
@@ -107,16 +100,16 @@ final class FunctionsTest extends TestCase {
 		// The code replaces the symbol rather than joining it: "49.99 USD" is
 		// how an amount is written when the currency has to be stated, and
 		// "$49.99 USD" says it twice.
-		$this->assertSame( '49.99 USD', format_money_with_code( 4999 ) );
-		$this->assertSame( '$', currency_symbol() );
-		$this->assertSame( 2, currency_decimals() );
-		$this->assertSame( 0, currency_decimals( 'JPY' ) );
-		$this->assertTrue( is_supported_currency( 'gbp' ) );
-		$this->assertFalse( is_supported_currency( 'ZZZ' ) );
+		$this->assertSame( '49.99 USD', format_money( 4999, array( 'symbol' => false, 'code' => true ) ) );
+		$this->assertSame( '$', Currencies::symbol( money_currency() ) );
+		$this->assertSame( 0, Currencies::decimals( 'JPY' ) );
+		$this->assertTrue( Currencies::supports( 'gbp' ) );
+		$this->assertFalse( Currencies::supports( 'ZZZ' ) );
+
 		// Keyed by upper-case code, which is what a select control stores.
-		$this->assertArrayHasKey( 'USD', currency_options() );
-		$this->assertSame( 49.99, money_to_float( 4999 ) );
-		$this->assertStringContainsString( '49.99', render_money( 4999 ) );
+		$this->assertArrayHasKey( 'USD', Currencies::options() );
+		$this->assertSame( 49.99, Money::to_float( 4999, 'USD' ) );
+		$this->assertStringContainsString( '49.99', render_price( 4999 ) );
 	}
 
 	/**
@@ -174,7 +167,7 @@ final class FunctionsTest extends TestCase {
 	 */
 	#[DataProvider( 'recurringProvider' )]
 	public function test_a_subscription_price_names_its_period( int $count, string $interval, string $expect ): void {
-		$this->assertSame( $expect, format_money_recurring( 999, $interval, $count ) );
+		$this->assertSame( $expect, format_money( 999, array( 'interval' => $interval, 'interval_count' => $count ) ) );
 	}
 
 	/**
@@ -199,8 +192,8 @@ final class FunctionsTest extends TestCase {
 	 * No interval is a plain price, not a broken one.
 	 */
 	public function test_no_interval_is_a_plain_price(): void {
-		$this->assertSame( '$9.99', format_money_recurring( 999, '' ) );
-		$this->assertSame( '$9.99', Recurring::format( 999, 'USD', '   ' ) );
+		$this->assertSame( '$9.99', format_money( 999, array( 'interval' => '' ) ) );
+		$this->assertSame( '$9.99', Money::format( 999, array( 'currency' => 'USD', 'interval' => '   ' ) ) );
 	}
 
 	/**
@@ -210,8 +203,8 @@ final class FunctionsTest extends TestCase {
 	 * from a gateway that left the field unset.
 	 */
 	public function test_a_zero_count_reads_as_one(): void {
-		$this->assertSame( '$9.99/mo', format_money_recurring( 999, 'month', 0 ) );
-		$this->assertSame( '$9.99/mo', format_money_recurring( 999, 'month', -3 ) );
+		$this->assertSame( '$9.99/mo', format_money( 999, array( 'interval' => 'month', 'interval_count' => 0 ) ) );
+		$this->assertSame( '$9.99/mo', format_money( 999, array( 'interval' => 'month', 'interval_count' => -3 ) ) );
 	}
 
 	/**
@@ -221,15 +214,15 @@ final class FunctionsTest extends TestCase {
 	 * than refusing to render the price.
 	 */
 	public function test_an_unknown_interval_is_passed_through(): void {
-		$this->assertSame( '$9.99/quarter', format_money_recurring( 999, 'quarter' ) );
-		$this->assertSame( '$9.99 every 2 quarters', format_money_recurring( 999, 'quarter', 2 ) );
+		$this->assertSame( '$9.99/quarter', format_money( 999, array( 'interval' => 'quarter' ) ) );
+		$this->assertSame( '$9.99 every 2 quarters', format_money( 999, array( 'interval' => 'quarter', 'interval_count' => 2 ) ) );
 	}
 
 	/**
 	 * A recurring price obeys the currency's decimals like any other.
 	 */
 	public function test_a_recurring_price_obeys_the_currency(): void {
-		$this->assertSame( '¥1,000/mo', format_money_recurring( 1000, 'month', 1, 'JPY' ) );
+		$this->assertSame( '¥1,000/mo', format_money( 1000, array( 'currency' => 'JPY', 'interval' => 'month', 'interval_count' => 1 ) ) );
 	}
 
 	/**
@@ -244,18 +237,18 @@ final class FunctionsTest extends TestCase {
 	 * A rate formats through the helper too.
 	 */
 	public function test_a_rate_formats_through_the_helper(): void {
-		$this->assertSame( '20%', format_rate( 20, 'percent' ) );
-		$this->assertSame( '$0.20', format_rate( 20, 'flat' ) );
+		$this->assertSame( '20%', Rate::format( 20, 'percent' ) );
+		$this->assertSame( '$0.20', Rate::format( 20, 'flat' ) );
 	}
 
 	/**
 	 * The sale helpers forward too.
 	 */
 	public function test_the_sale_helpers_forward(): void {
-		$html = render_sale_price( 1999, 2999 );
+		$html = render_price( 1999, array( 'compare_at' => 2999 ) );
 
 		$this->assertStringContainsString( '$29.99', $html );
 		$this->assertStringContainsString( '$19.99', $html );
-		$this->assertSame( 33, money_saving_percentage( 1999, 2999 ) );
+		$this->assertSame( 33, Money::saving_percentage( 1999, 2999 ) );
 	}
 }

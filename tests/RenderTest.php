@@ -27,14 +27,14 @@ final class RenderTest extends TestCase {
 	 * An amount comes back wrapped and escaped.
 	 */
 	public function test_an_amount_is_wrapped_and_escaped(): void {
-		$this->assertSame( '<span class="price">$49.99</span>', Render::amount( 4999, 'USD' ) );
+		$this->assertSame( '<span class="price">$49.99</span>', Render::price( 4999, array( 'currency' => 'USD' ) ) );
 	}
 
 	/**
 	 * The wrapper class is the caller's, and is escaped.
 	 */
 	public function test_the_class_is_escaped(): void {
-		$html = Render::amount( 100, 'USD', 'a" onclick="x' );
+		$html = Render::price( 100, array( 'currency' => 'USD', 'class' => 'a" onclick="x' ) );
 
 		$this->assertStringNotContainsString( 'onclick="x"', $html );
 		$this->assertStringContainsString( '&quot;', $html );
@@ -47,12 +47,12 @@ final class RenderTest extends TestCase {
 	 * reached for something ASCII-only, would not.
 	 */
 	public function test_a_non_ascii_symbol_survives(): void {
-		$this->assertStringContainsString( '৳', Render::amount( 100, 'BDT' ) );
-		$this->assertStringContainsString( '₼', Render::amount( 100, 'AZN' ) );
+		$this->assertStringContainsString( '৳', Render::price( 100, array( 'currency' => 'BDT' ) ) );
+		$this->assertStringContainsString( '₼', Render::price( 100, array( 'currency' => 'AZN' ) ) );
 
 		// And no entity-encoding of the glyph, which is what escaping twice
 		// would produce.
-		$this->assertStringNotContainsString( '&amp;', Render::amount( 100, 'BDT' ) );
+		$this->assertStringNotContainsString( '&amp;', Render::price( 100, array( 'currency' => 'BDT' ) ) );
 	}
 
 	/**
@@ -61,10 +61,10 @@ final class RenderTest extends TestCase {
 	 * `$49.99` is ambiguous across the dollar currencies.
 	 */
 	public function test_the_code_form_names_the_currency(): void {
-		$html = Render::amount( 4999, 'AUD', 'price', array( 'code' => true ) );
+		$html = Render::price( 4999, array( 'currency' => 'AUD', 'symbol' => false, 'code' => true ) );
 
 		$this->assertStringContainsString( 'AUD', $html );
-		$this->assertNotSame( Render::amount( 4999, 'AUD' ), $html );
+		$this->assertNotSame( Render::price( 4999, array( 'currency' => 'AUD' ) ), $html );
 	}
 
 	/**
@@ -74,7 +74,7 @@ final class RenderTest extends TestCase {
 	 * by 100 shows a 1,000 yen order as ¥10.00.
 	 */
 	public function test_a_zero_decimal_currency_renders_whole(): void {
-		$html = Render::amount( 1000, 'JPY' );
+		$html = Render::price( 1000, array( 'currency' => 'JPY' ) );
 
 		$this->assertStringContainsString( '1,000', $html );
 		$this->assertStringNotContainsString( '10.00', $html );
@@ -84,6 +84,6 @@ final class RenderTest extends TestCase {
 	 * And a three-decimal one keeps all three.
 	 */
 	public function test_a_three_decimal_currency_keeps_three(): void {
-		$this->assertStringContainsString( '1.500', Render::amount( 1500, 'BHD' ) );
+		$this->assertStringContainsString( '1.500', Render::price( 1500, array( 'currency' => 'BHD' ) ) );
 	}
 }

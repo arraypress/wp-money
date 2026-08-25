@@ -97,6 +97,55 @@ if ( ! function_exists( 'number_format_i18n' ) ) {
 	}
 }
 
+
+if ( ! defined( 'WP_DEBUG' ) ) {
+	define( 'WP_DEBUG', true );
+}
+
+/**
+ * What _doing_it_wrong() was told.
+ *
+ * @var array<int, string>
+ */
+$GLOBALS['mo_wrong'] = array();
+
+if ( ! function_exists( '_doing_it_wrong' ) ) {
+	/**
+	 * Record the complaint rather than raising it.
+	 *
+	 * @param string $function The function.
+	 * @param string $message  The complaint.
+	 * @param string $version  Since when.
+	 *
+	 * @return void
+	 */
+	function _doing_it_wrong( string $function, string $message, string $version ): void {
+		$GLOBALS['mo_wrong'][] = $message;
+	}
+}
+
+if ( ! function_exists( 'esc_html' ) ) {
+	/**
+	 * Core's HTML escaper.
+	 *
+	 * @param string $text Text.
+	 *
+	 * @return string
+	 */
+	function esc_html( string $text ): string {
+		return htmlspecialchars( $text, ENT_QUOTES, 'UTF-8' );
+	}
+}
+
+/**
+ * Forget what _doing_it_wrong() was told.
+ *
+ * @return void
+ */
+function mo_reset_wrong(): void {
+	$GLOBALS['mo_wrong'] = array();
+}
+
 /**
  * Forget any filter a test registered.
  *

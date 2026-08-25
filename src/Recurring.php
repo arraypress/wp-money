@@ -39,31 +39,6 @@ final class Recurring {
 	public const INTERVALS = array( 'day', 'week', 'month', 'year' );
 
 	/**
-	 * A recurring price, short form.
-	 *
-	 * `£9.99/mo`, which is what fits in a table cell and on a button.
-	 *
-	 * @since 1.2.0
-	 *
-	 * @param int                     $amount   Amount in the smallest currency unit.
-	 * @param string                  $code     ISO-4217 code.
-	 * @param string                  $interval 'day', 'week', 'month' or 'year'.
-	 * @param int                     $count    How many intervals between charges.
-	 * @param array                   $options  How to write the amount. See Options.
-	 *
-	 * @return string
-	 */
-	public static function format(
-		int $amount,
-		string $code,
-		string $interval,
-		int $count = 1,
-		array $options = array()
-	): string {
-		return Money::format( $amount, $code, $options ) . self::suffix( $interval, $count );
-	}
-
-	/**
 	 * What follows the amount.
 	 *
 	 * Two shapes, because one does not cover both cases. Every month is

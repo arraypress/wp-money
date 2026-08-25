@@ -12,8 +12,6 @@ declare( strict_types=1 );
 
 use ArrayPress\Money\Currencies;
 use ArrayPress\Money\Money;
-use ArrayPress\Money\Rate;
-use ArrayPress\Money\Recurring;
 use ArrayPress\Money\Render;
 
 // Exit if accessed directly.
@@ -31,9 +29,8 @@ if ( ! function_exists( 'money_currency' ) ) {
 	/**
 	 * The currency to use when none is given.
 	 *
-	 * Every helper below takes an optional code and falls back to this, so a
-	 * single-currency store never repeats itself. Filterable, because a
-	 * multi-currency store's answer depends on the request.
+	 * Filterable, because a multi-currency store's answer depends on the
+	 * request.
 	 *
 	 * @since 1.2.0
 	 *
@@ -57,93 +54,41 @@ if ( ! function_exists( 'money_currency' ) ) {
 
 if ( ! function_exists( 'format_money' ) ) {
 	/**
-	 * Format an amount for a person to read.
+	 * An amount as text.
+	 *
+	 *     format_money( 4999 );                              // '$49.99'
+	 *     format_money( 1000, [ 'currency' => 'JPY' ] );      // '¥1,000'
+	 *     format_money( 4999, [ 'code' => true ] );           // '$49.99 USD'
+	 *     format_money( 999, [ 'interval' => 'month' ] );     // '$9.99/mo'
 	 *
 	 * @since 1.2.0
 	 *
-	 * @param int    $amount Amount in the smallest currency unit.
-	 * @param string              $code    ISO-4217 code, or empty for the store's.
-	 * @param array               $options How to write it. See Options.
-	 *
-	 * @return string e.g. `$49.99`, `¥1,000`, `BD 1.500`.
-	 */
-	function format_money( int $amount, string $code = '', array $options = array() ): string {
-		return Money::format( $amount, '' !== $code ? $code : money_currency(), $options );
-	}
-}
-
-if ( ! function_exists( 'format_money_with_code' ) ) {
-	/**
-	 * Format an amount with its currency named.
-	 *
-	 * For anywhere more than one currency can appear: `$49.99` is ambiguous
-	 * across the dollar currencies and `$49.99 USD` is not.
-	 *
-	 * @since 1.2.0
-	 *
-	 * @param int    $amount Amount in the smallest currency unit.
-	 * @param string $code   ISO-4217 code, or empty for the store's.
+	 * @param int                  $amount  Amount in the smallest currency unit.
+	 * @param array<string, mixed> $options How to write it. See Options.
 	 *
 	 * @return string
 	 */
-	function format_money_with_code( int $amount, string $code = '' ): string {
-		// The code replaces the symbol rather than joining it. `$49.99 USD`
-		// says the currency twice; pass array( 'symbol' => true, 'code' =>
-		// true ) to format_money() where an invoice wants both.
-		return Money::format(
-			$amount,
-			'' !== $code ? $code : money_currency(),
-			array(
-				'symbol' => false,
-				'code'   => true,
-			)
-		);
+	function format_money( int $amount, array $options = array() ): string {
+		return Money::format( $amount, $options );
 	}
 }
 
-if ( ! function_exists( 'format_money_recurring' ) ) {
+if ( ! function_exists( 'render_price' ) ) {
 	/**
-	 * Format a subscription price.
+	 * An amount as escaped markup.
 	 *
-	 * @since 1.2.0
+	 *     render_price( 4999 );
+	 *     render_price( 1999, [ 'compare_at' => 2999 ] );   // struck through
 	 *
-	 * @param int    $amount   Amount in the smallest currency unit.
-	 * @param string $interval 'day', 'week', 'month' or 'year'.
-	 * @param int    $count    How many intervals between charges.
-	 * @param string $code     ISO-4217 code, or empty for the store's.
+	 * @since 1.5.0
 	 *
-	 * @return string e.g. `$9.99/mo`, `$9.99 every 3 months`.
-	 */
-	function format_money_recurring(
-		int $amount,
-		string $interval,
-		int $count = 1,
-		string $code = '',
-		array $options = array()
-	): string {
-		return Recurring::format( $amount, '' !== $code ? $code : money_currency(), $interval, $count, $options );
-	}
-}
-
-if ( ! function_exists( 'render_money' ) ) {
-	/**
-	 * An amount, wrapped and escaped, for putting in a page.
-	 *
-	 * @since 1.2.0
-	 *
-	 * @param int    $amount Amount in the smallest currency unit.
-	 * @param string $code   ISO-4217 code, or empty for the store's.
-	 * @param string $class  Class for the wrapper.
+	 * @param int                  $amount  Amount in the smallest currency unit.
+	 * @param array<string, mixed> $options How to write it. See Options.
 	 *
 	 * @return string
 	 */
-	function render_money(
-		int $amount,
-		string $code = '',
-		string $class = 'price',
-		array $options = array()
-	): string {
-		return Render::amount( $amount, '' !== $code ? $code : money_currency(), $class, $options );
+	function render_price( int $amount, array $options = array() ): string {
+		return Render::price( $amount, $options );
 	}
 }
 
@@ -151,9 +96,9 @@ if ( ! function_exists( 'sanitize_money' ) ) {
 	/**
 	 * Read an amount a person typed, as minor units.
 	 *
-	 * Takes "19.99", "£19.99", "1,999.00" or "19,99" and gives back the
-	 * integer this library works in. Anything unreadable is nought rather
-	 * than a fatal, because this is what a form field goes through.
+	 * Takes "19.99", "£19.99", "1,999.00" or "19,99". Anything unreadable is
+	 * nought rather than a fatal, because this is what a form field goes
+	 * through.
 	 *
 	 * @since 1.2.0
 	 *
@@ -171,27 +116,7 @@ if ( ! function_exists( 'sanitize_money' ) ) {
 			return 0;
 		}
 
-		return Money::parse( (string) $value, '' !== $code ? $code : money_currency() );
-	}
-}
-
-if ( ! function_exists( 'money_to_float' ) ) {
-	/**
-	 * An amount as a float, for a gateway that insists on one.
-	 *
-	 * Not for arithmetic. `0.1 + 0.2` is not `0.3` in binary floating point,
-	 * and a rounding error in a total is a discrepancy somebody reconciles by
-	 * hand. Keep amounts integer and use this at the boundary only.
-	 *
-	 * @since 1.2.0
-	 *
-	 * @param int    $amount Amount in the smallest currency unit.
-	 * @param string $code   ISO-4217 code, or empty for the store's.
-	 *
-	 * @return float
-	 */
-	function money_to_float( int $amount, string $code = '' ): float {
-		return Money::to_float( $amount, '' !== $code ? $code : money_currency() );
+		return Money::parse( (string) $value, Money::currency( $code ) );
 	}
 }
 
@@ -199,8 +124,10 @@ if ( ! function_exists( 'money_input_value' ) ) {
 	/**
 	 * An amount as it should sit in a text input.
 	 *
-	 * No symbol and no thousands separator, so it round-trips through
-	 * sanitize_money() unchanged.
+	 * No symbol and no separators, so it round-trips through sanitize_money()
+	 * unchanged. A named helper rather than an options array because getting
+	 * it wrong silently changes a price the moment somebody opens the form
+	 * and saves it without touching the field.
 	 *
 	 * @since 1.2.0
 	 *
@@ -210,121 +137,13 @@ if ( ! function_exists( 'money_input_value' ) ) {
 	 * @return string
 	 */
 	function money_input_value( int $amount, string $code = '' ): string {
-		return Money::format( $amount, '' !== $code ? $code : money_currency(), array(
-			'symbol' => false,
-			'separators' => false,
-		) );
-	}
-}
-
-if ( ! function_exists( 'currency_symbol' ) ) {
-	/**
-	 * A currency's symbol.
-	 *
-	 * @since 1.2.0
-	 *
-	 * @param string $code ISO-4217 code, or empty for the store's.
-	 *
-	 * @return string
-	 */
-	function currency_symbol( string $code = '' ): string {
-		return Currencies::symbol( '' !== $code ? $code : money_currency() );
-	}
-}
-
-if ( ! function_exists( 'currency_decimals' ) ) {
-	/**
-	 * How many decimal places a currency has.
-	 *
-	 * Nought for fifteen of them and three for five, which is why dividing by
-	 * a hundred is wrong for twenty currencies.
-	 *
-	 * @since 1.2.0
-	 *
-	 * @param string $code ISO-4217 code, or empty for the store's.
-	 *
-	 * @return int
-	 */
-	function currency_decimals( string $code = '' ): int {
-		return Currencies::decimals( '' !== $code ? $code : money_currency() );
-	}
-}
-
-if ( ! function_exists( 'is_supported_currency' ) ) {
-	/**
-	 * Whether this library knows a currency.
-	 *
-	 * @since 1.2.0
-	 *
-	 * @param string $code ISO-4217 code.
-	 *
-	 * @return bool
-	 */
-	function is_supported_currency( string $code ): bool {
-		return Currencies::supports( $code );
-	}
-}
-
-if ( ! function_exists( 'currency_options' ) ) {
-	/**
-	 * Every currency, for a settings dropdown.
-	 *
-	 * @since 1.2.0
-	 *
-	 * @return array<string, string> Code against name.
-	 */
-	function currency_options(): array {
-		return Currencies::options();
-	}
-}
-
-if ( ! function_exists( 'format_rate' ) ) {
-	/**
-	 * Format a rate, which is a percentage or an amount depending on its kind.
-	 *
-	 * @since 1.2.0
-	 *
-	 * @param int|float   $value A percentage, or an amount in minor units.
-	 * @param string|null $kind  'percent', or anything else for a flat amount.
-	 * @param string      $code  ISO-4217 code, or empty for the store's.
-	 *
-	 * @return string
-	 */
-	function format_rate( int|float $value, ?string $kind, string $code = '' ): string {
-		return Rate::format( $value, $kind, '' !== $code ? $code : money_currency() );
-	}
-}
-
-if ( ! function_exists( 'render_sale_price' ) ) {
-	/**
-	 * A reduced price, with what it cost before struck through.
-	 *
-	 * @since 1.4.0
-	 *
-	 * @param int    $amount     What is being charged.
-	 * @param int    $compare_at What it cost before.
-	 * @param string $code       ISO-4217 code, or empty for the store's.
-	 * @param string $class      Class for the wrapper.
-	 *
-	 * @return string
-	 */
-	function render_sale_price( int $amount, int $compare_at, string $code = '', string $class = 'price' ): string {
-		return Render::sale( $amount, $compare_at, '' !== $code ? $code : money_currency(), $class );
-	}
-}
-
-if ( ! function_exists( 'money_saving_percentage' ) ) {
-	/**
-	 * How much a reduction takes off, as a whole percentage, for a badge.
-	 *
-	 * @since 1.4.0
-	 *
-	 * @param int $amount     What is being charged.
-	 * @param int $compare_at What it cost before.
-	 *
-	 * @return int
-	 */
-	function money_saving_percentage( int $amount, int $compare_at ): int {
-		return Money::saving_percentage( $amount, $compare_at );
+		return Money::format(
+			$amount,
+			array(
+				'currency'   => $code,
+				'symbol'     => false,
+				'separators' => false,
+			)
+		);
 	}
 }

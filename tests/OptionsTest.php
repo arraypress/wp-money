@@ -11,6 +11,7 @@ namespace ArrayPress\Money\Tests;
 
 use ArrayPress\Money\Money;
 use ArrayPress\Money\Options;
+use ArrayPress\Money\Render;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -34,8 +35,8 @@ final class OptionsTest extends TestCase {
 	 * What a shop front shows, and what every caller passing nothing gets.
 	 */
 	public function test_the_default_is_a_plain_price(): void {
-		$this->assertSame( '$1,999.00', Money::format( 199900, 'USD' ) );
-		$this->assertSame( '$1,999.00', Money::format( 199900, 'USD', array() ) );
+		$this->assertSame( '$1,999.00', Money::format( 199900, array( 'currency' => 'USD' ) ) );
+		$this->assertSame( '$1,999.00', Money::format( 199900, array( 'currency' => 'USD' ) ) );
 	}
 
 	/**
@@ -46,7 +47,7 @@ final class OptionsTest extends TestCase {
 	 */
 	#[\PHPUnit\Framework\Attributes\DataProvider( 'optionProvider' )]
 	public function test_each_option_changes_one_thing( array $options, string $expect ): void {
-		$this->assertSame( $expect, Money::format( 199900, 'USD', $options ) );
+		$this->assertSame( $expect, Money::format( 199900, array( 'currency' => 'USD' ) + $options ) );
 	}
 
 	/**
@@ -75,15 +76,9 @@ final class OptionsTest extends TestCase {
 	public function test_the_options_combine(): void {
 		$this->assertSame(
 			'$1999.00 USD',
-			Money::format(
-				199900,
-				'USD',
-				array(
-					'symbol'     => true,
+			Money::format( 199900, array( 'currency' => 'USD', 'symbol'     => true,
 					'code'       => true,
-					'separators' => false,
-				)
-			)
+					'separators' => false ) )
 		);
 	}
 
@@ -97,10 +92,10 @@ final class OptionsTest extends TestCase {
 	 */
 	#[\PHPUnit\Framework\Attributes\DataProvider( 'optionProvider' )]
 	public function test_the_currency_decimals_survive_every_option( array $options, string $ignored ): void {
-		$this->assertStringContainsString( '1000', str_replace( ',', '', Money::format( 1000, 'JPY', $options ) ) );
-		$this->assertStringNotContainsString( '10.00', Money::format( 1000, 'JPY', $options ) );
+		$this->assertStringContainsString( '1000', str_replace( ',', '', Money::format( 1000, array( 'currency' => 'JPY' ) + $options ) ) );
+		$this->assertStringNotContainsString( '10.00', Money::format( 1000, array( 'currency' => 'JPY' ) + $options ) );
 
-		$this->assertStringContainsString( '1.500', Money::format( 1500, 'BHD', $options ) );
+		$this->assertStringContainsString( '1.500', Money::format( 1500, array( 'currency' => 'BHD' ) + $options ) );
 	}
 
 
@@ -108,7 +103,11 @@ final class OptionsTest extends TestCase {
 	 * Only the declared keys are read.
 	 */
 	public function test_only_the_declared_keys_are_read(): void {
-		$this->assertSame( array( 'symbol', 'code', 'separators' ), Options::keys() );
+		$this->assertSame( array( 'currency', 'symbol', 'code', 'separators', 'interval', 'interval_count' ), Options::keys() );
+
+		// A renderer reads two more.
+		$this->assertContains( 'compare_at', Options::keys( true ) );
+		$this->assertContains( 'class', Options::keys( true ) );
 
 		$parsed = Options::parse( array( 'symbol' => false, 'nonsense' => true ) );
 
@@ -134,8 +133,59 @@ final class OptionsTest extends TestCase {
 	 */
 	public function test_a_misspelled_option_leaves_the_defaults(): void {
 		$this->assertSame(
-			Money::format( 4999, 'USD' ),
-			@Money::format( 4999, 'USD', array( 'symbal' => false ) )
+			Money::format( 4999, array( 'currency' => 'USD' ) ),
+			@Money::format( 4999, array( 'currency' => 'USD', 'symbal' => false ) )
 		);
+	}
+
+	/**
+	 * A formatter refuses the rendering keys, loudly.
+	 *
+	 * `compare_at` passed to format_money() rather than render_price() is the
+	 * mistake this catches most: it is a plausible thing to write, it does
+	 * nothing, and the only symptom is a sale price that renders as an
+	 * ordinary one.
+	 */
+	public function test_a_formatter_refuses_the_rendering_keys(): void {
+		mo_reset_wrong();
+
+		Money::format( 1999, array( 'compare_at' => 2999 ) );
+
+		$this->assertCount( 1, $GLOBALS['mo_wrong'] );
+		$this->assertStringContainsString( 'compare_at', $GLOBALS['mo_wrong'][0] );
+
+		// And a renderer accepts them without complaint.
+		mo_reset_wrong();
+
+		Render::price( 1999, array( 'compare_at' => 2999 ) );
+
+		$this->assertSame( array(), $GLOBALS['mo_wrong'] );
+	}
+
+	/**
+	 * The renderer does not pass its own keys down to the formatter.
+	 *
+	 * They are not format keys, so the formatter would complain about them --
+	 * on every rendered price, in every debug log.
+	 */
+	public function test_the_renderer_keeps_its_own_keys(): void {
+		mo_reset_wrong();
+
+		Render::price( 1999, array( 'compare_at' => 2999, 'class' => 'cost' ) );
+
+		$this->assertSame( array(), $GLOBALS['mo_wrong'] );
+	}
+
+	/**
+	 * A misspelled key is named, and does not change the price.
+	 */
+	public function test_a_misspelled_key_is_named(): void {
+		mo_reset_wrong();
+
+		$rendered = Money::format( 4999, array( 'currency' => 'USD', 'symbal' => false ) );
+
+		$this->assertSame( Money::format( 4999, array( 'currency' => 'USD' ) ), $rendered );
+		$this->assertCount( 1, $GLOBALS['mo_wrong'] );
+		$this->assertStringContainsString( 'symbal', $GLOBALS['mo_wrong'][0] );
 	}
 }

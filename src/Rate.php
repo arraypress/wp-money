@@ -77,7 +77,7 @@ final class Rate {
 	public static function format( int|float $value, ?string $kind, string $currency = 'USD', int $decimals = 0 ): string {
 		return self::is_percentage( $kind )
 			? self::percentage( (float) $value, $decimals )
-			: Money::format( (int) $value, $currency );
+			: Money::format( (int) $value, array( 'currency' => $currency ) );
 	}
 
 	/**

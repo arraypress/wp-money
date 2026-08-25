@@ -33,7 +33,7 @@ final class SaleTest extends TestCase {
 	 * sense of.
 	 */
 	public function test_a_reduction_strikes_through_the_old_price(): void {
-		$html = Render::sale( 1999, 2999, 'USD' );
+		$html = Render::price( 1999, array( 'currency' => 'USD', 'compare_at' => 2999 ) );
 
 		$this->assertStringContainsString( '<del>', $html );
 		$this->assertStringContainsString( '$29.99', $html );
@@ -53,7 +53,7 @@ final class SaleTest extends TestCase {
 	 * sounds exactly like the price.
 	 */
 	public function test_each_price_is_labelled_for_a_screen_reader(): void {
-		$html = Render::sale( 1999, 2999, 'USD' );
+		$html = Render::price( 1999, array( 'currency' => 'USD', 'compare_at' => 2999 ) );
 
 		$this->assertStringContainsString( 'screen-reader-text', $html );
 		$this->assertStringContainsString( 'Regular price', $html );
@@ -71,10 +71,10 @@ final class SaleTest extends TestCase {
 	 */
 	#[DataProvider( 'notASaleProvider' )]
 	public function test_a_compare_at_that_is_not_higher_is_not_a_sale( int $compare_at ): void {
-		$html = Render::sale( 1999, $compare_at, 'USD' );
+		$html = Render::price( 1999, array( 'currency' => 'USD', 'compare_at' => $compare_at ) );
 
 		$this->assertStringNotContainsString( '<del>', $html );
-		$this->assertSame( Render::amount( 1999, 'USD' ), $html );
+		$this->assertSame( Render::price( 1999, array( 'currency' => 'USD' ) ), $html );
 	}
 
 	/**
@@ -135,7 +135,7 @@ final class SaleTest extends TestCase {
 		$this->assertSame( 2499, $regular - Rate::applied_to( $regular, 500, 'flat' ) );
 
 		// And it renders as a sale against the original.
-		$html = Render::sale( $regular - Rate::applied_to( $regular, 20, 'percent' ), $regular, 'USD' );
+		$html = Render::price( $regular - Rate::applied_to( $regular, 20, 'percent' ), array( 'currency' => 'USD', 'compare_at' => $regular ) );
 
 		$this->assertStringContainsString( '$23.99', $html );
 		$this->assertStringContainsString( '$29.99', $html );
@@ -145,7 +145,7 @@ final class SaleTest extends TestCase {
 	 * A sale price obeys the currency's decimals like any other.
 	 */
 	public function test_a_sale_price_obeys_the_currency(): void {
-		$html = Render::sale( 1000, 2000, 'JPY' );
+		$html = Render::price( 1000, array( 'currency' => 'JPY', 'compare_at' => 2000 ) );
 
 		$this->assertStringContainsString( '¥1,000', $html );
 		$this->assertStringContainsString( '¥2,000', $html );

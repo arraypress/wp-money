@@ -35,8 +35,8 @@ namespace ArrayPress\Money;
  *
  * Typical use:
  *
- *   Money::format( 4999, 'USD' );        // '$49.99'
- *   Money::format( 1000, 'JPY' );        // '¥1,000'
+ *   Money::format( 4999 );                              // '$49.99'
+ *   Money::format( 1000, [ 'currency' => 'JPY' ] );      // '¥1,000'
  *   Money::parse( '49.99', 'USD' );      // 4999
  *
  * @since 1.0.0
@@ -53,9 +53,10 @@ final readonly class Money {
 	 *
 	 * @return string e.g. `$49.99`, `¥1,000`, `BD 1.500`.
 	 */
-	public static function format( int $amount, string $code, array $options = array() ): string {
+	public static function format( int $amount, array $options = array() ): string {
 		$options = Options::parse( $options );
 
+		$code     = self::currency( $options['currency'] );
 		$rendered = self::decimal( $amount, $code );
 
 		if ( ! $options['separators'] ) {
@@ -66,7 +67,32 @@ final readonly class Money {
 			$rendered = self::with_symbol( $rendered, $amount, $code );
 		}
 
-		return $options['code'] ? self::with_code( $rendered, $code ) : $rendered;
+		if ( $options['code'] ) {
+			$rendered = self::with_code( $rendered, $code );
+		}
+
+		if ( '' !== $options['interval'] ) {
+			$rendered .= Recurring::suffix( $options['interval'], (int) $options['interval_count'] );
+		}
+
+		return $rendered;
+	}
+
+	/**
+	 * The currency to format in.
+	 *
+	 * @since 1.5.0
+	 *
+	 * @param string $code ISO-4217 code, or empty for the store's.
+	 *
+	 * @return string
+	 */
+	public static function currency( string $code = '' ): string {
+		if ( '' !== $code ) {
+			return $code;
+		}
+
+		return function_exists( 'money_currency' ) ? money_currency() : 'USD';
 	}
 
 	private static function with_symbol( string $rendered, int $amount, string $code ): string {
@@ -363,11 +389,11 @@ final readonly class Money {
 		// Zero is allowed: subscriptions use it for trials and full
 		// coupons, and Stripe accepts it.
 		if ( 0 !== $amount && $minimum > 0 && $amount < $minimum ) {
-			return 'Minimum charge for ' . $upper . ' is ' . self::format( $minimum, $code ) . '.';
+			return 'Minimum charge for ' . $upper . ' is ' . self::format( $minimum, array( 'currency' => $code ) ) . '.';
 		}
 
 		if ( $amount > Currencies::maximum_charge( $code ) ) {
-			return 'Maximum charge for ' . $upper . ' is ' . self::format( Currencies::maximum_charge( $code ), $code ) . '.';
+			return 'Maximum charge for ' . $upper . ' is ' . self::format( Currencies::maximum_charge( $code ), array( 'currency' => $code ) ) . '.';
 		}
 
 		if ( ! self::is_valid_amount( $amount, $code ) ) {
