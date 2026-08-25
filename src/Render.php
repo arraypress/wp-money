@@ -52,7 +52,9 @@ final class Render {
 	 * An amount with the code beside it, for a page showing more than one
 	 * currency.
 	 *
-	 * `$49.99` is ambiguous across the dollar currencies; `$49.99 USD` is not.
+	 * `$49.99` is ambiguous across the dollar currencies. This drops the
+	 * symbol and names the currency instead -- `49.99 USD` -- which is how an
+	 * amount is written when the currency has to be stated.
 	 *
 	 * @since 1.0.0
 	 *

@@ -31,7 +31,10 @@
   "autoload": {
     "psr-4": {
       "ArrayPress\\Money\\": "src/"
-    }
+    },
+    "files": [
+      "src/Functions.php"
+    ]
   },
   "autoload-dev": {
     "psr-4": {

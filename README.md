@@ -64,6 +64,57 @@ belongs is a display bug, showing `20%` where `£0.20` belongs is a pricing one.
 Deductions are bounded by the amount and never negative, and percentages round
 rather than truncate — 8.875% of £19.99 truncated loses a penny on every line.
 
+
+## Global functions
+
+The surface a plugin calls. Every one falls back to the store's currency, so a
+single-currency shop never repeats itself:
+
+```php
+format_money( 4999 );                          // '$49.99'
+format_money( 1000, 'JPY' );                   // '¥1,000'
+format_money_with_code( 4999 );                // '49.99 USD'
+format_money_recurring( 999, 'month' );        // '$9.99/mo'
+format_money_recurring( 999, 'month', 3 );     // '$9.99 every 3 months'
+render_money( 4999 );                          // '<span class="price">$49.99</span>'
+
+sanitize_money( '$1,999.00' );                 // 199900
+money_input_value( 199900 );                   // '1999.00' — round-trips
+money_to_float( 4999 );                        // 49.99, for a gateway only
+
+currency_symbol();                             // '$'
+currency_decimals( 'JPY' );                    // 0
+is_supported_currency( 'ZZZ' );                // false
+currency_options();                            // for a select
+format_rate( 20, 'percent' );                  // '20%'
+```
+
+The store's currency comes from a filter:
+
+```php
+add_filter( 'money_currency', fn() => 'GBP' );
+```
+
+A filter returning something unsupported falls back to USD rather than
+formatting every price on the site with no symbol and two decimals.
+
+## Subscriptions
+
+```php
+use ArrayPress\\Money\\Recurring;
+
+Recurring::format( 999, 'USD', 'month' );      // '$9.99/mo'
+Recurring::format( 999, 'USD', 'month', 3 );   // '$9.99 every 3 months'
+Recurring::options();                          // Daily / Weekly / Monthly / Yearly
+```
+
+Two shapes because one does not cover both cases. `/mo` fits beside a price;
+`/3mo` is not something anybody parses on the first attempt.
+
+An interval this library has not heard of is passed through rather than
+refused — a gateway may add one before this does, and `/quarter` beats not
+rendering the price.
+
 ## Requirements
 
 PHP 8.3+ and WordPress (`ext-intl` optional, for locale-aware formatting)
