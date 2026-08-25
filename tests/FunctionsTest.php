@@ -56,6 +56,8 @@ final class FunctionsTest extends TestCase {
 				'is_supported_currency',
 				'currency_options',
 				'format_rate',
+				'render_sale_price',
+				'money_saving_percentage',
 			) as $function
 		) {
 			$this->assertTrue( function_exists( $function ), sprintf( '%s() was never declared.', $function ) );
@@ -244,5 +246,16 @@ final class FunctionsTest extends TestCase {
 	public function test_a_rate_formats_through_the_helper(): void {
 		$this->assertSame( '20%', format_rate( 20, 'percent' ) );
 		$this->assertSame( '$0.20', format_rate( 20, 'flat' ) );
+	}
+
+	/**
+	 * The sale helpers forward too.
+	 */
+	public function test_the_sale_helpers_forward(): void {
+		$html = render_sale_price( 1999, 2999 );
+
+		$this->assertStringContainsString( '$29.99', $html );
+		$this->assertStringContainsString( '$19.99', $html );
+		$this->assertSame( 33, money_saving_percentage( 1999, 2999 ) );
 	}
 }

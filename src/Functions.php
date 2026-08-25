@@ -294,3 +294,37 @@ if ( ! function_exists( 'format_rate' ) ) {
 		return Rate::format( $value, $kind, '' !== $code ? $code : money_currency() );
 	}
 }
+
+if ( ! function_exists( 'render_sale_price' ) ) {
+	/**
+	 * A reduced price, with what it cost before struck through.
+	 *
+	 * @since 1.4.0
+	 *
+	 * @param int    $amount     What is being charged.
+	 * @param int    $compare_at What it cost before.
+	 * @param string $code       ISO-4217 code, or empty for the store's.
+	 * @param string $class      Class for the wrapper.
+	 *
+	 * @return string
+	 */
+	function render_sale_price( int $amount, int $compare_at, string $code = '', string $class = 'price' ): string {
+		return Render::sale( $amount, $compare_at, '' !== $code ? $code : money_currency(), $class );
+	}
+}
+
+if ( ! function_exists( 'money_saving_percentage' ) ) {
+	/**
+	 * How much a reduction takes off, as a whole percentage, for a badge.
+	 *
+	 * @since 1.4.0
+	 *
+	 * @param int $amount     What is being charged.
+	 * @param int $compare_at What it cost before.
+	 *
+	 * @return int
+	 */
+	function money_saving_percentage( int $amount, int $compare_at ): int {
+		return Money::saving_percentage( $amount, $compare_at );
+	}
+}

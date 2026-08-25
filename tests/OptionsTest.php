@@ -103,34 +103,12 @@ final class OptionsTest extends TestCase {
 		$this->assertStringContainsString( '1.500', Money::format( 1500, 'BHD', $options ) );
 	}
 
-	/**
-	 * A locale lays the amount out its own way.
-	 *
-	 * Skipped without intl, because the fallback is the point: a missing
-	 * extension must not stop a price rendering.
-	 */
-	public function test_a_locale_lays_the_amount_out_its_own_way(): void {
-		if ( ! class_exists( \NumberFormatter::class ) ) {
-			$this->assertSame(
-				Money::format( 123456, 'EUR' ),
-				Money::format( 123456, 'EUR', array( 'locale' => 'fr_FR' ) ),
-				'Without intl a locale should fall back rather than fail.'
-			);
-
-			$this->markTestSkipped( 'intl is not installed.' );
-		}
-
-		$this->assertNotSame(
-			Money::format( 123456, 'EUR', array( 'locale' => 'en_US' ) ),
-			Money::format( 123456, 'EUR', array( 'locale' => 'fr_FR' ) )
-		);
-	}
 
 	/**
 	 * Only the declared keys are read.
 	 */
 	public function test_only_the_declared_keys_are_read(): void {
-		$this->assertSame( array( 'symbol', 'code', 'separators', 'locale' ), Options::keys() );
+		$this->assertSame( array( 'symbol', 'code', 'separators' ), Options::keys() );
 
 		$parsed = Options::parse( array( 'symbol' => false, 'nonsense' => true ) );
 

@@ -56,18 +56,14 @@ final readonly class Money {
 	public static function format( int $amount, string $code, array $options = array() ): string {
 		$options = Options::parse( $options );
 
-		if ( '' !== $options['locale'] ) {
-			$rendered = self::localized( $amount, $code, $options['locale'] );
-		} else {
-			$rendered = self::decimal( $amount, $code );
+		$rendered = self::decimal( $amount, $code );
 
-			if ( ! $options['separators'] ) {
-				$rendered = str_replace( ',', '', $rendered );
-			}
+		if ( ! $options['separators'] ) {
+			$rendered = str_replace( ',', '', $rendered );
+		}
 
-			if ( $options['symbol'] ) {
-				$rendered = self::with_symbol( $rendered, $amount, $code );
-			}
+		if ( $options['symbol'] ) {
+			$rendered = self::with_symbol( $rendered, $amount, $code );
 		}
 
 		return $options['code'] ? self::with_code( $rendered, $code ) : $rendered;
@@ -107,33 +103,6 @@ final readonly class Money {
 		$suffix = Currencies::sanitize_code( $code );
 
 		return '' === $suffix ? $rendered : $rendered . ' ' . $suffix;
-	}
-
-	/**
-	 * Format using the platform's locale rules.
-	 *
-	 * Places the symbol and separators the way the target locale expects
-	 * — `1 234,56 €` in French, `€1,234.56` in English. Requires ext-intl
-	 * and falls back to {@see self::format()} without it.
-	 *
-	 * @since 1.0.0
-	 *
-	 * @param int    $amount Amount in the smallest currency unit.
-	 * @param string $code   ISO-4217 code.
-	 * @param string $locale Locale, or '' for the currency's default.
-	 *
-	 * @return string
-	 */
-	private static function localized( int $amount, string $code, string $locale = '' ): string {
-		if ( ! class_exists( \NumberFormatter::class ) ) {
-			return self::format( $amount, $code );
-		}
-
-		$locale    = '' !== $locale ? $locale : Currencies::locale( $code );
-		$formatter = new \NumberFormatter( $locale, \NumberFormatter::CURRENCY );
-		$result    = $formatter->formatCurrency( self::to_float( $amount, $code ), strtoupper( trim( $code ) ) );
-
-		return false === $result ? self::format( $amount, $code ) : $result;
 	}
 
 	/**
@@ -284,7 +253,23 @@ final readonly class Money {
 	 * Either way the safe rule for an amount you will settle is the same:
 	 * make it a multiple of 100.
 	 */
-	private const HUNDRED_MULTIPLE = array( 'isk', 'ugx', 'huf', 'twd' );
+	private const HUNDRED_MULTIPLE = array( 'isk', 'ugx' );
+
+	/**
+	 * Currencies that must be whole major units when paying *out*.
+	 *
+	 * HUF and TWD are zero-decimal for payouts and two-decimal for charges.
+	 * Stripe is explicit about it: "Stripe treats HUF as a zero-decimal
+	 * currency for payouts, even though you can charge two-decimal amounts."
+	 *
+	 * They are kept apart from the charge rule because conflating them
+	 * refuses a charge Stripe would have taken -- a HUF 10.45 order is
+	 * perfectly chargeable and would have been rejected by this library
+	 * before it ever reached the API.
+	 *
+	 * @var string[]
+	 */
+	private const HUNDRED_MULTIPLE_PAYOUT = array( 'huf', 'twd' );
 
 	/**
 	 * Whether an amount is one the processor will accept.
@@ -298,10 +283,15 @@ final readonly class Money {
 	 * places, so the amount must be a multiple of ten. BHD 1.234 is
 	 * refused.
 	 *
-	 * **Four currencies must be whole major units.** ISK and UGX moved to
+	 * **Two currencies must be whole major units.** ISK and UGX moved to
 	 * zero decimals but are still expressed with `00` in the minor
-	 * position; HUF and TWD are zero-decimal for payout purposes. All
-	 * four need a multiple of 100.
+	 * position, so a charge needs a multiple of 100 -- Stripe says you
+	 * cannot charge fractions of either.
+	 *
+	 * HUF and TWD are deliberately *not* in that group. They are
+	 * zero-decimal for payouts and two-decimal for charges, and treating
+	 * them as charge-restricted refuses a HUF 10.45 order that Stripe
+	 * would have taken. See is_valid_payout().
 	 *
 	 * @since 1.0.0
 	 *
@@ -312,6 +302,31 @@ final readonly class Money {
 	 */
 	public static function is_valid_amount( int $amount, string $code ): bool {
 		return 0 === $amount % self::increment( $code );
+	}
+
+	/**
+	 * Whether an amount is one the processor will pay out.
+	 *
+	 * A different question from is_valid_amount(), and only for HUF and TWD,
+	 * where the two answers differ: a HUF 10.45 charge is fine and a HUF 10.45
+	 * manual payout is refused, because the payout amount must be evenly
+	 * divisible by 100.
+	 *
+	 * @since 1.4.0
+	 *
+	 * @param int    $amount Amount in the smallest currency unit.
+	 * @param string $code   ISO-4217 code.
+	 *
+	 * @return bool
+	 */
+	public static function is_valid_payout( int $amount, string $code ): bool {
+		if ( ! self::is_valid_amount( $amount, $code ) ) {
+			return false;
+		}
+
+		return in_array( strtolower( trim( $code ) ), self::HUNDRED_MULTIPLE_PAYOUT, true )
+			? 0 === $amount % 100
+			: true;
 	}
 
 	/**
@@ -408,7 +423,7 @@ final readonly class Money {
 			return 100;
 		}
 
-		return Currencies::is_three_decimal( $code ) ? 10 : 1;
+		return 3 === Currencies::decimals( $code ) ? 10 : 1;
 	}
 
 	/**
@@ -504,5 +519,26 @@ final readonly class Money {
 		}
 
 		return $value;
+	}
+
+	/**
+	 * How much a reduction takes off, as a whole percentage.
+	 *
+	 * For the badge on a product card. Rounded down, so the saving is never
+	 * overstated: 33.9% off reads as 33%, which is a claim the price supports.
+	 *
+	 * @since 1.4.0
+	 *
+	 * @param int $amount     What is being charged.
+	 * @param int $compare_at What it cost before.
+	 *
+	 * @return int Nought when it is not a reduction.
+	 */
+	public static function saving_percentage( int $amount, int $compare_at ): int {
+		if ( $compare_at <= 0 || $amount >= $compare_at ) {
+			return 0;
+		}
+
+		return (int) floor( ( ( $compare_at - $amount ) / $compare_at ) * 100 );
 	}
 }

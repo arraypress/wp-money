@@ -133,6 +133,38 @@ the usual objection to configuration arrays answered: a misspelled key is not
 an error in PHP, so it would otherwise do nothing silently and the only symptom
 would be a price that does not look the way it was asked to.
 
+
+## Sale prices
+
+```php
+render_sale_price( 1999, 2999 );
+// <span class="price price--sale">
+//   <del><span class="screen-reader-text">Regular price</span>$29.99</del>
+//   <ins><span class="screen-reader-text">Sale price</span>$19.99</ins>
+// </span>
+
+money_saving_percentage( 1999, 2999 );   // 33 — for the badge
+```
+
+`<del>` and `<ins>` rather than spans with classes: that is what the elements
+mean, and it is the only version a screen reader can make sense of. Without
+the hidden labels the two numbers are read out one after another with nothing
+to say which is which, and a struck-through price sounds exactly like the
+price.
+
+A compare-at at or below the amount renders as an ordinary price — striking
+through a number that is the same or smaller reads as an increase, and equal
+prices arrive routinely from a product whose sale has ended.
+
+The percentage rounds **down**, so a badge never overstates the saving.
+
+For a discount rather than a fixed sale price:
+
+```php
+$sale = $regular - Rate::applied_to( $regular, 20, 'percent' );
+render_sale_price( $sale, $regular );
+```
+
 ## Subscriptions
 
 ```php

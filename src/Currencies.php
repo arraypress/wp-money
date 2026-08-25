@@ -362,19 +362,6 @@ final readonly class Currencies {
 	}
 
 	/**
-	 * The default locale for rendering this currency.
-	 *
-	 * @since 1.0.0
-	 *
-	 * @param string $code ISO-4217 code.
-	 *
-	 * @return string
-	 */
-	public static function locale( string $code ): string {
-		return self::get( $code )['locale'] ?? 'en_US';
-	}
-
-	/**
 	 * The primary issuing country.
 	 *
 	 * @since 1.0.0
@@ -385,63 +372,6 @@ final readonly class Currencies {
 	 */
 	public static function country( string $code ): string {
 		return self::get( $code )['country'] ?? '';
-	}
-
-	/**
-	 * Currencies issued by a country.
-	 *
-	 * @since 1.0.0
-	 *
-	 * @param string $country_code ISO 3166-1 alpha-2 code.
-	 *
-	 * @return string[] Uppercase currency codes.
-	 */
-	public static function for_country( string $country_code ): array {
-		$country = strtoupper( trim( $country_code ) );
-		$found   = array();
-
-		foreach ( self::CURRENCIES as $code => $meta ) {
-			if ( $meta['country'] === $country ) {
-				$found[] = strtoupper( $code );
-			}
-		}
-
-		return $found;
-	}
-
-	/**
-	 * Whether a currency has no minor unit.
-	 *
-	 * The fifteen currencies where an amount is a whole number of the
-	 * major unit — JPY, KRW, VND and the CFA francs among them. Stripe
-	 * expects those amounts unmultiplied, so ¥1000 is sent as 1000, not
-	 * 100000.
-	 *
-	 * @since 1.0.0
-	 *
-	 * @param string $code ISO-4217 code.
-	 *
-	 * @return bool
-	 */
-	public static function is_zero_decimal( string $code ): bool {
-		return 0 === self::decimals( $code );
-	}
-
-	/**
-	 * Whether a currency has three decimal places.
-	 *
-	 * BHD, JOD, KWD, OMR and TND. Stripe requires these amounts to be a
-	 * multiple of ten, since it settles them in hundredths despite the
-	 * three-digit exponent.
-	 *
-	 * @since 1.0.0
-	 *
-	 * @param string $code ISO-4217 code.
-	 *
-	 * @return bool
-	 */
-	public static function is_three_decimal( string $code ): bool {
-		return 3 === self::decimals( $code );
 	}
 
 	/**

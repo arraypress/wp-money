@@ -51,11 +51,6 @@ final class Options {
 		// Group the thousands: `1,999.00` rather than `1999.00`. Off for a
 		// text input, so a value round-trips through a form unchanged.
 		'separators' => true,
-
-		// Lay the amount out the way a locale does -- `49,99 €` -- through
-		// PHP's intl extension. Falls back silently when intl is absent,
-		// because a missing extension should not stop a price rendering.
-		'locale'     => '',
 	);
 
 	/**

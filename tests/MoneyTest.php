@@ -13,7 +13,6 @@ declare( strict_types=1 );
 namespace ArrayPress\Money\Tests;
 
 use PHPUnit\Framework\Attributes\DataProvider;
-use PHPUnit\Framework\Attributes\RequiresPhpExtension;
 use PHPUnit\Framework\TestCase;
 use ArrayPress\Money\Currencies;
 use ArrayPress\Money\Money;
@@ -71,13 +70,6 @@ final class MoneyTest extends TestCase {
 		);
 	}
 
-	public function test_the_zero_and_three_decimal_sets_are_the_expected_size(): void {
-		$zero  = array_filter( Currencies::codes(), static fn( string $c ): bool => Currencies::is_zero_decimal( $c ) );
-		$three = array_filter( Currencies::codes(), static fn( string $c ): bool => Currencies::is_three_decimal( $c ) );
-
-		$this->assertCount( 15, $zero );
-		$this->assertCount( 5, $three );
-	}
 
 	/* ─── Formatting ────────────────────────────────────────────────── */
 
@@ -132,15 +124,6 @@ final class MoneyTest extends TestCase {
 		$this->assertSame( '1000', Money::format( 1000, 'JPY', array( 'symbol' => false, 'separators' => false ) ) );
 	}
 
-	#[RequiresPhpExtension( 'intl' )]
-	public function test_localized_formatting_follows_the_locale(): void {
-		$english = Money::format( 123456, 'EUR', array( 'locale' => 'en_US' ) );
-		$french  = Money::format( 123456, 'EUR', array( 'locale' => 'fr_FR' ) );
-
-		$this->assertNotSame( $english, $french );
-		$this->assertStringContainsString( '234', $english );
-		$this->assertStringContainsString( '234', $french );
-	}
 
 	/* ─── Parsing ───────────────────────────────────────────────────── */
 
@@ -196,10 +179,12 @@ final class MoneyTest extends TestCase {
 	}
 
 	/**
-	 * ISK and UGX moved to zero decimals but Stripe still expects them
-	 * with 00 in the minor position; HUF and TWD are zero-decimal for
-	 * payouts. All four reject anything that is not a whole major unit,
-	 * and none of that is implied by their decimal exponent.
+	 * ISK and UGX moved to zero decimals but Stripe still expects them with
+	 * 00 in the minor position, so a charge must be a whole major unit --
+	 * which their decimal exponent does not imply.
+	 *
+	 * HUF and TWD are deliberately absent. They are zero-decimal for payouts
+	 * only; Stripe takes two-decimal charges in both. See SaleTest.
 	 */
 	#[DataProvider( 'hundred_multiple_currencies' )]
 	public function test_whole_major_unit_currencies( string $code ): void {
@@ -218,8 +203,6 @@ final class MoneyTest extends TestCase {
 		return array(
 			'ISK' => array( 'ISK' ),
 			'UGX' => array( 'UGX' ),
-			'HUF' => array( 'HUF' ),
-			'TWD' => array( 'TWD' ),
 			'lowercase' => array( 'isk' ),
 		);
 	}
@@ -330,11 +313,6 @@ final class MoneyTest extends TestCase {
 
 	/* ─── Lookups ───────────────────────────────────────────────────── */
 
-	public function test_currencies_resolve_by_country(): void {
-		$this->assertContains( 'JPY', Currencies::for_country( 'JP' ) );
-		$this->assertContains( 'GBP', Currencies::for_country( 'gb' ) );
-		$this->assertSame( array(), Currencies::for_country( 'ZZ' ) );
-	}
 
 	public function test_select_options_are_labelled_and_sorted(): void {
 		$options = Currencies::options();
