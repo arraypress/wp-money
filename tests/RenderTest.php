@@ -61,7 +61,7 @@ final class RenderTest extends TestCase {
 	 * `$49.99` is ambiguous across the dollar currencies.
 	 */
 	public function test_the_code_form_names_the_currency(): void {
-		$html = Render::amount_with_code( 4999, 'AUD' );
+		$html = Render::amount( 4999, 'AUD', 'price', array( 'code' => true ) );
 
 		$this->assertStringContainsString( 'AUD', $html );
 		$this->assertNotSame( Render::amount( 4999, 'AUD' ), $html );

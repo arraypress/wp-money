@@ -62,12 +62,13 @@ if ( ! function_exists( 'format_money' ) ) {
 	 * @since 1.2.0
 	 *
 	 * @param int    $amount Amount in the smallest currency unit.
-	 * @param string $code   ISO-4217 code, or empty for the store's.
+	 * @param string              $code    ISO-4217 code, or empty for the store's.
+	 * @param array               $options How to write it. See Options.
 	 *
 	 * @return string e.g. `$49.99`, `¥1,000`, `BD 1.500`.
 	 */
-	function format_money( int $amount, string $code = '' ): string {
-		return Money::format( $amount, '' !== $code ? $code : money_currency() );
+	function format_money( int $amount, string $code = '', array $options = array() ): string {
+		return Money::format( $amount, '' !== $code ? $code : money_currency(), $options );
 	}
 }
 
@@ -86,7 +87,17 @@ if ( ! function_exists( 'format_money_with_code' ) ) {
 	 * @return string
 	 */
 	function format_money_with_code( int $amount, string $code = '' ): string {
-		return Money::format_with_code( $amount, '' !== $code ? $code : money_currency() );
+		// The code replaces the symbol rather than joining it. `$49.99 USD`
+		// says the currency twice; pass array( 'symbol' => true, 'code' =>
+		// true ) to format_money() where an invoice wants both.
+		return Money::format(
+			$amount,
+			'' !== $code ? $code : money_currency(),
+			array(
+				'symbol' => false,
+				'code'   => true,
+			)
+		);
 	}
 }
 
@@ -103,8 +114,14 @@ if ( ! function_exists( 'format_money_recurring' ) ) {
 	 *
 	 * @return string e.g. `$9.99/mo`, `$9.99 every 3 months`.
 	 */
-	function format_money_recurring( int $amount, string $interval, int $count = 1, string $code = '' ): string {
-		return Recurring::format( $amount, '' !== $code ? $code : money_currency(), $interval, $count );
+	function format_money_recurring(
+		int $amount,
+		string $interval,
+		int $count = 1,
+		string $code = '',
+		array $options = array()
+	): string {
+		return Recurring::format( $amount, '' !== $code ? $code : money_currency(), $interval, $count, $options );
 	}
 }
 
@@ -120,8 +137,13 @@ if ( ! function_exists( 'render_money' ) ) {
 	 *
 	 * @return string
 	 */
-	function render_money( int $amount, string $code = '', string $class = 'price' ): string {
-		return Render::amount( $amount, '' !== $code ? $code : money_currency(), $class );
+	function render_money(
+		int $amount,
+		string $code = '',
+		string $class = 'price',
+		array $options = array()
+	): string {
+		return Render::amount( $amount, '' !== $code ? $code : money_currency(), $class, $options );
 	}
 }
 
@@ -188,7 +210,10 @@ if ( ! function_exists( 'money_input_value' ) ) {
 	 * @return string
 	 */
 	function money_input_value( int $amount, string $code = '' ): string {
-		return Money::input_value( $amount, '' !== $code ? $code : money_currency() );
+		return Money::format( $amount, '' !== $code ? $code : money_currency(), array(
+			'symbol' => false,
+			'separators' => false,
+		) );
 	}
 }
 

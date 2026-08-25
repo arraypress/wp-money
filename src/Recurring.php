@@ -12,6 +12,7 @@ declare( strict_types=1 );
 
 namespace ArrayPress\Money;
 
+
 /**
  * Class Recurring
  *
@@ -44,33 +45,22 @@ final class Recurring {
 	 *
 	 * @since 1.2.0
 	 *
-	 * @param int    $amount   Amount in the smallest currency unit.
-	 * @param string $code     ISO-4217 code.
-	 * @param string $interval 'day', 'week', 'month' or 'year'.
-	 * @param int    $count    How many intervals between charges.
+	 * @param int                     $amount   Amount in the smallest currency unit.
+	 * @param string                  $code     ISO-4217 code.
+	 * @param string                  $interval 'day', 'week', 'month' or 'year'.
+	 * @param int                     $count    How many intervals between charges.
+	 * @param array                   $options  How to write the amount. See Options.
 	 *
 	 * @return string
 	 */
-	public static function format( int $amount, string $code, string $interval, int $count = 1 ): string {
-		$base = Money::format( $amount, $code );
-
-		return $base . self::suffix( $interval, $count );
-	}
-
-	/**
-	 * A recurring price with the currency named.
-	 *
-	 * @since 1.2.0
-	 *
-	 * @param int    $amount   Amount in the smallest currency unit.
-	 * @param string $code     ISO-4217 code.
-	 * @param string $interval 'day', 'week', 'month' or 'year'.
-	 * @param int    $count    How many intervals between charges.
-	 *
-	 * @return string
-	 */
-	public static function format_with_code( int $amount, string $code, string $interval, int $count = 1 ): string {
-		return Money::format_with_code( $amount, $code ) . self::suffix( $interval, $count );
+	public static function format(
+		int $amount,
+		string $code,
+		string $interval,
+		int $count = 1,
+		array $options = array()
+	): string {
+		return Money::format( $amount, $code, $options ) . self::suffix( $interval, $count );
 	}
 
 	/**

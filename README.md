@@ -98,6 +98,41 @@ add_filter( 'money_currency', fn() => 'GBP' );
 A filter returning something unsupported falls back to USD rather than
 formatting every price on the site with no symbol and two decimals.
 
+
+## Formatter options
+
+One formatter, with options. There used to be a method per combination —
+`format()`, `format_with_code()`, `format_localized()`, `decimal()`,
+`input_value()` — and adding subscriptions doubled it, because every one wanted
+a recurring twin.
+
+```php
+Money::format( 199900, 'USD' );                                   // '$1,999.00'
+Money::format( 199900, 'USD', [ 'symbol' => false ] );            // '1,999.00'
+Money::format( 199900, 'USD', [ 'code' => true ] );               // '$1,999.00 USD'
+Money::format( 199900, 'USD', [ 'separators' => false ] );        // '$1999.00'
+Money::format( 123456, 'EUR', [ 'locale' => 'fr_FR' ] );          // '1 234,56 €'
+```
+
+| Key | Default | What it does |
+|-----|---------|--------------|
+| `symbol` | `true` | Show the currency's symbol |
+| `code` | `false` | Name the currency after the amount |
+| `separators` | `true` | Group the thousands |
+| `locale` | `''` | Lay the amount out the way a locale does |
+
+They combine, which is why this is an array and not an enum — an enum would put
+`localized` beside `code` as though you could not want both, and "symbol and
+code" is a real thing an invoice wants.
+
+`Recurring::format()` and `Render::amount()` take the same options and append
+or wrap whatever comes back.
+
+An option nothing reads raises `_doing_it_wrong()` under `WP_DEBUG`. That is
+the usual objection to configuration arrays answered: a misspelled key is not
+an error in PHP, so it would otherwise do nothing silently and the only symptom
+would be a price that does not look the way it was asked to.
+
 ## Subscriptions
 
 ```php

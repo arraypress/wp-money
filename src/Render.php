@@ -12,6 +12,7 @@ declare( strict_types=1 );
 
 namespace ArrayPress\Money;
 
+
 /**
  * Class Render
  *
@@ -36,39 +37,21 @@ final class Render {
 	 *
 	 * @param int    $amount Amount in the smallest currency unit.
 	 * @param string $code   ISO-4217 code.
-	 * @param string $class  Class for the wrapper.
+	 * @param string              $class   Class for the wrapper.
+	 * @param array               $options How to write the amount. See Options.
 	 *
 	 * @return string
 	 */
-	public static function amount( int $amount, string $code, string $class = 'price' ): string {
+	public static function amount(
+		int $amount,
+		string $code,
+		string $class = 'price',
+		array $options = array()
+	): string {
 		return sprintf(
 			'<span class="%s">%s</span>',
 			esc_attr( $class ),
-			esc_html( Money::format( $amount, $code ) )
-		);
-	}
-
-	/**
-	 * An amount with the code beside it, for a page showing more than one
-	 * currency.
-	 *
-	 * `$49.99` is ambiguous across the dollar currencies. This drops the
-	 * symbol and names the currency instead -- `49.99 USD` -- which is how an
-	 * amount is written when the currency has to be stated.
-	 *
-	 * @since 1.0.0
-	 *
-	 * @param int    $amount Amount in the smallest currency unit.
-	 * @param string $code   ISO-4217 code.
-	 * @param string $class  Class for the wrapper.
-	 *
-	 * @return string
-	 */
-	public static function amount_with_code( int $amount, string $code, string $class = 'price' ): string {
-		return sprintf(
-			'<span class="%s">%s</span>',
-			esc_attr( $class ),
-			esc_html( Money::format_with_code( $amount, $code ) )
+			esc_html( Money::format( $amount, $code, $options ) )
 		);
 	}
 }

@@ -33,7 +33,7 @@ final class MoneySecurityTest extends TestCase {
 		$this->assertSame( '', Currencies::symbol( $code ) );
 		$this->assertSame( '', Currencies::name( $code ) );
 
-		foreach ( array( Money::format( 100, $code ), Money::format_with_code( 100, $code ) ) as $rendered ) {
+		foreach ( array( Money::format( 100, $code ), Money::format( 100, $code, array( 'symbol' => false, 'code' => true ) ) ) as $rendered ) {
 			$this->assertStringNotContainsString( '<', $rendered );
 			$this->assertStringNotContainsString( '"', $rendered );
 			$this->assertSame( '1.00', trim( $rendered ) );
@@ -64,12 +64,12 @@ final class MoneySecurityTest extends TestCase {
 	public function test_a_plausible_unknown_code_is_kept(): void {
 		$this->assertSame( 'XYZ', Currencies::sanitize_code( 'xyz' ) );
 		$this->assertSame( 'XYZ', Currencies::symbol( 'XYZ' ) );
-		$this->assertSame( '1.00 XYZ', Money::format_with_code( 100, 'xyz' ) );
+		$this->assertSame( '1.00 XYZ', Money::format( 100, 'xyz', array( 'symbol' => false, 'code' => true ) ) );
 	}
 
 	public function test_known_codes_are_unaffected(): void {
 		$this->assertSame( '$1.00', Money::format( 100, 'usd' ) );
-		$this->assertSame( '1.00 USD', Money::format_with_code( 100, 'USD' ) );
+		$this->assertSame( '1.00 USD', Money::format( 100, 'USD', array( 'symbol' => false, 'code' => true ) ) );
 		$this->assertSame( '¥1,000', Money::format( 1000, 'JPY' ) );
 	}
 

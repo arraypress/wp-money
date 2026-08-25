@@ -123,19 +123,19 @@ final class MoneyTest extends TestCase {
 	}
 
 	public function test_formatting_with_a_code(): void {
-		$this->assertSame( '49.99 USD', Money::format_with_code( 4999, 'USD' ) );
-		$this->assertSame( '1,000 JPY', Money::format_with_code( 1000, 'JPY' ) );
+		$this->assertSame( '49.99 USD', Money::format( 4999, 'USD', array( 'symbol' => false, 'code' => true ) ) );
+		$this->assertSame( '1,000 JPY', Money::format( 1000, 'JPY', array( 'symbol' => false, 'code' => true ) ) );
 	}
 
 	public function test_input_values_have_no_separators(): void {
-		$this->assertSame( '1234567.89', Money::input_value( 123456789, 'USD' ) );
-		$this->assertSame( '1000', Money::input_value( 1000, 'JPY' ) );
+		$this->assertSame( '1234567.89', Money::format( 123456789, 'USD', array( 'symbol' => false, 'separators' => false ) ) );
+		$this->assertSame( '1000', Money::format( 1000, 'JPY', array( 'symbol' => false, 'separators' => false ) ) );
 	}
 
 	#[RequiresPhpExtension( 'intl' )]
 	public function test_localized_formatting_follows_the_locale(): void {
-		$english = Money::format_localized( 123456, 'EUR', 'en_US' );
-		$french  = Money::format_localized( 123456, 'EUR', 'fr_FR' );
+		$english = Money::format( 123456, 'EUR', array( 'locale' => 'en_US' ) );
+		$french  = Money::format( 123456, 'EUR', array( 'locale' => 'fr_FR' ) );
 
 		$this->assertNotSame( $english, $french );
 		$this->assertStringContainsString( '234', $english );
@@ -175,7 +175,7 @@ final class MoneyTest extends TestCase {
 			foreach ( array( 0, 1, 999, 4999, 100000, 123456789 ) as $amount ) {
 				$this->assertSame(
 					$amount,
-					Money::parse( Money::input_value( $amount, $code ), $code ),
+					Money::parse( Money::format( $amount, $code, array( 'symbol' => false, 'separators' => false ) ), $code ),
 					$code . ' ' . $amount
 				);
 			}

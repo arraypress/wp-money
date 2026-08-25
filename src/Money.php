@@ -12,6 +12,7 @@ declare( strict_types=1 );
 
 namespace ArrayPress\Money;
 
+
 /**
  * Class Money
  *
@@ -52,9 +53,28 @@ final readonly class Money {
 	 *
 	 * @return string e.g. `$49.99`, `¥1,000`, `BD 1.500`.
 	 */
-	public static function format( int $amount, string $code ): string {
+	public static function format( int $amount, string $code, array $options = array() ): string {
+		$options = Options::parse( $options );
+
+		if ( '' !== $options['locale'] ) {
+			$rendered = self::localized( $amount, $code, $options['locale'] );
+		} else {
+			$rendered = self::decimal( $amount, $code );
+
+			if ( ! $options['separators'] ) {
+				$rendered = str_replace( ',', '', $rendered );
+			}
+
+			if ( $options['symbol'] ) {
+				$rendered = self::with_symbol( $rendered, $amount, $code );
+			}
+		}
+
+		return $options['code'] ? self::with_code( $rendered, $code ) : $rendered;
+	}
+
+	private static function with_symbol( string $rendered, int $amount, string $code ): string {
 		$symbol   = Currencies::symbol( $code );
-		$rendered = self::decimal( $amount, $code );
 		$negative = $amount < 0;
 
 		if ( $negative ) {
@@ -65,7 +85,7 @@ final readonly class Money {
 		// space: "BD 1.500", but "$49.99". An empty symbol means the code
 		// was unrecognisable and got dropped — no leading space for it.
 		$joined = match ( true ) {
-			'' === $symbol            => $rendered,
+			'' === $symbol             => $rendered,
 			1 === mb_strlen( $symbol ) => $symbol . $rendered,
 			default                    => $symbol . ' ' . $rendered,
 		};
@@ -74,25 +94,19 @@ final readonly class Money {
 	}
 
 	/**
-	 * Format an amount with its code rather than its symbol.
+	 * The rendered amount with its code after it.
 	 *
-	 * Unambiguous, which matters wherever several currencies appear
-	 * together — a report listing `$49.99` twice is not telling you
-	 * whether those are the same currency.
+	 * @since 1.3.0
 	 *
-	 * @since 1.0.0
+	 * @param string $rendered What the amount already reads as.
+	 * @param string $code     ISO-4217 code.
 	 *
-	 * @param int    $amount Amount in the smallest currency unit.
-	 * @param string $code   ISO-4217 code.
-	 *
-	 * @return string e.g. `49.99 USD`.
+	 * @return string
 	 */
-	public static function format_with_code( int $amount, string $code ): string {
+	private static function with_code( string $rendered, string $code ): string {
 		$suffix = Currencies::sanitize_code( $code );
 
-		return '' === $suffix
-			? self::decimal( $amount, $code )
-			: self::decimal( $amount, $code ) . ' ' . $suffix;
+		return '' === $suffix ? $rendered : $rendered . ' ' . $suffix;
 	}
 
 	/**
@@ -110,7 +124,7 @@ final readonly class Money {
 	 *
 	 * @return string
 	 */
-	public static function format_localized( int $amount, string $code, string $locale = '' ): string {
+	private static function localized( int $amount, string $code, string $locale = '' ): string {
 		if ( ! class_exists( \NumberFormatter::class ) ) {
 			return self::format( $amount, $code );
 		}
@@ -154,23 +168,6 @@ final readonly class Money {
 		$rendered = number_format( $major ) . '.' . str_pad( (string) $minor, $decimals, '0', STR_PAD_LEFT );
 
 		return $negative ? '-' . $rendered : $rendered;
-	}
-
-	/**
-	 * The bare decimal for a form field.
-	 *
-	 * No thousands separators, since they do not survive a round trip
-	 * through a number input.
-	 *
-	 * @since 1.0.0
-	 *
-	 * @param int    $amount Amount in the smallest currency unit.
-	 * @param string $code   ISO-4217 code.
-	 *
-	 * @return string e.g. `1234.56`.
-	 */
-	public static function input_value( int $amount, string $code ): string {
-		return str_replace( ',', '', self::decimal( $amount, $code ) );
 	}
 
 	/**
