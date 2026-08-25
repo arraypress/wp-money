@@ -1,0 +1,130 @@
+# WP Money
+
+Money formatting and parsing for integer minor units. 136 currencies with correct decimal exponents — including the twenty where dividing by 100 is wrong. Zero dependencies.
+
+## Why
+
+Store money as an integer number of minor units, always. Floats cannot represent `0.10`, and the error compounds through every total, tax line and refund until a report is out by a penny nobody can find.
+
+That leaves one question the integer does not answer: how many minor units are in a major one? Almost every implementation assumes 100. It is 1 for yen, and 1000 for Bahraini dinar — so ¥1000 sent as `100000` charges a hundred times too much, and BD 1.500 sent as `150` charges a tenth.
+
+Twenty of the 136 currencies here are not two-decimal. Getting that wrong is not a rounding bug, it is a two-orders-of-magnitude billing error.
+
+## Features
+
+- 💰 **Integer arithmetic throughout** — no float ever touches an amount.
+- 🔢 **Correct exponents** — 0 for JPY and the CFA francs, 3 for BHD, KWD, OMR, TND.
+- 🏦 **Stripe's special cases** — ISK, HUF, TWD and UGX, where the API's expectation differs from the ISO exponent.
+- 📉 **Minimum and maximum charge amounts** — per currency, so you can reject an uncharageable total before the gateway does.
+- 🧮 **Fair allocation** — split an amount into parts with the remainder distributed, never lost.
+- 🖊️ **Forgiving parsing** — `€1.234,56` and `$1,234.56` both come back as `123456`.
+- 🌐 **Locale formatting** — via ext-intl when present, with a sensible fallback when not.
+
+
+## Rendering
+
+`Money::format()` returns text. `Render` puts it in a page, escaping exactly
+once:
+
+```php
+use ArrayPress\\Money\\Render;
+
+echo Render::amount( 4999, 'USD' );              // <span class="price">$49.99</span>
+echo Render::amount_with_code( 4999, 'AUD' );    // names the currency, for
+                                                 // pages showing more than one
+```
+
+Kept apart from `Money` deliberately — formatting is arithmetic and has no
+opinion about markup, and once the two share a class somebody escapes twice or
+not at all.
+
+## Requirements
+
+PHP 8.3+ and WordPress (`ext-intl` optional, for locale-aware formatting)
+
+## Installation
+
+```bash
+composer require arraypress/wp-money
+```
+
+## Usage
+
+```php
+use ArrayPress\Money\Money;
+
+Money::format( 4999, 'USD' );            // '$49.99'
+Money::format( 1000, 'JPY' );            // '¥1,000'
+Money::format( 1500, 'BHD' );            // 'BD 1.500'
+Money::format_with_code( 4999, 'USD' );  // '49.99 USD'
+Money::decimal( 4999, 'USD' );           // '49.99'
+Money::input_value( 4999, 'USD' );       // '49.99' — no separators, for a form field
+```
+
+### Parsing
+
+```php
+Money::parse( '$1,234.56', 'USD' );   // 123456
+Money::parse( '€1.234,56', 'EUR' );   // 123456
+Money::parse( '1000', 'JPY' );        // 1000
+Money::parse( 'nonsense', 'USD' );    // 0
+```
+
+Throws `InvalidArgumentException` for an amount too large to hold in an integer — a twenty-digit figure typed into a price field. Clamping it silently would be worse.
+
+### Validating an amount
+
+```php
+Money::is_valid_amount( 150, 'JPY' );        // false — JPY has no minor unit
+Money::round_to_valid( 150, 'JPY' );         // 150 → nearest representable
+Money::is_chargeable( 20, 'USD' );           // false — under Stripe's minimum
+Money::why_not_chargeable( 20, 'USD' );      // a sentence you can show the buyer
+```
+
+### Splitting
+
+```php
+Money::percentage( 4999, 20.0 );   // 1000 — VAT, rounded once
+Money::allocate( 1000, 3 );        // [334, 333, 333] — remainder distributed, total preserved
+```
+
+`allocate()` is the one to reach for when splitting a discount across line items or a payout across parties. Dividing and rounding each part independently loses or invents money.
+
+### Metadata
+
+```php
+use ArrayPress\Money\Currencies;
+
+Currencies::decimals( 'BHD' );        // 3
+Currencies::symbol( 'GBP' );          // '£'
+Currencies::name( 'JPY' );            // 'Japanese Yen'
+Currencies::is_zero_decimal( 'KRW' ); // true
+Currencies::for_country( 'CH' );      // ['CHF']
+Currencies::options();                // code => label, for a select
+```
+
+## The currencies that are not two-decimal
+
+| Exponent | Currencies |
+|---|---|
+| 0 | BIF, CLP, DJF, GNF, JPY, KMF, KRW, MGA, PYG, RWF, UGX, VND, VUV, XAF, XOF, XPF |
+| 3 | BHD, IQD, JOD, KWD, LYD, OMR, TND |
+
+Four more are worth knowing about because Stripe treats them differently from ISO 4217: **ISK** and **HUF** are zero-decimal at ISO but must be sent as multiples of 100; **TWD** likewise; **UGX** is zero-decimal but historically was sent otherwise. The tables here follow what the API actually expects.
+
+## Security
+
+Currency codes arrive from query strings more often than people expect — `?currency=` on a headless checkout. An unrecognised code is never echoed back into formatted output; see [SECURITY.md](SECURITY.md).
+
+## Testing
+
+```bash
+composer install
+composer test
+```
+
+93 tests, 873 assertions — every exponent verified against ISO 4217 and Stripe's published tables, plus allocation invariants (the parts always sum to the whole) and the hostile-input cases.
+
+## License
+
+GPL-2.0-or-later
