@@ -1,67 +1,72 @@
 {
-  "name": "arraypress/wp-money",
-  "description": "Integer-minor-unit money formatting and parsing for WordPress. 136 currencies with the correct decimal exponent, so the twenty that are not two decimal places are right.",
-  "homepage": "https://github.com/arraypress/wp-money/",
-  "type": "library",
-  "license": "GPL-2.0-or-later",
-  "authors": [
-    {
-      "name": "David Sherlock",
-      "homepage": "https://arraypress.com/"
-    }
-  ],
-  "keywords": [
-    "wordpress",
-    "money",
-    "currency",
-    "iso-4217",
-    "formatting",
-    "ecommerce",
-    "minor-units"
-  ],
-  "require": {
-    "php": ">=8.3"
-  },
-  "require-dev": {
-    "phpcompatibility/phpcompatibility-wp": "^2.1",
-    "phpunit/phpunit": "^12.0",
-    "squizlabs/php_codesniffer": "^3.13.5",
-    "wp-coding-standards/wpcs": "^3.4"
-  },
-  "autoload": {
-    "psr-4": {
-      "ArrayPress\\Money\\": "src/"
+    "name": "arraypress/wp-money",
+    "description": "Integer-minor-unit money formatting and parsing for WordPress. 136 currencies with the correct decimal exponent, so the twenty that are not two decimal places are right.",
+    "homepage": "https://github.com/arraypress/wp-money/",
+    "type": "library",
+    "license": "GPL-2.0-or-later",
+    "authors": [
+        {
+            "name": "David Sherlock",
+            "homepage": "https://arraypress.com/"
+        }
+    ],
+    "keywords": [
+        "wordpress",
+        "money",
+        "currency",
+        "iso-4217",
+        "formatting",
+        "ecommerce",
+        "minor-units"
+    ],
+    "require": {
+        "php": ">=8.3"
     },
-    "files": [
-      "src/Functions.php"
-    ]
-  },
-  "autoload-dev": {
-    "psr-4": {
-      "ArrayPress\\Money\\Tests\\": "tests/"
+    "require-dev": {
+        "phpcompatibility/phpcompatibility-wp": "^2.1",
+        "phpunit/phpunit": "^12.0",
+        "squizlabs/php_codesniffer": "^3.13.5",
+        "wp-coding-standards/wpcs": "^3.4"
     },
-    "exclude-from-classmap": [
-      "/tests/bootstrap.php"
-    ]
-  },
-  "config": {
-    "optimize-autoloader": true,
-    "sort-packages": true,
-    "preferred-install": "dist",
-    "allow-plugins": {
-      "dealerdirect/phpcodesniffer-composer-installer": true
+    "autoload": {
+        "psr-4": {
+            "ArrayPress\\Money\\": "src/"
+        },
+        "files": [
+            "src/Functions.php"
+        ]
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "ArrayPress\\Money\\Tests\\": "tests/"
+        },
+        "exclude-from-classmap": [
+            "/tests/bootstrap.php"
+        ]
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "sort-packages": true,
+        "preferred-install": "dist",
+        "allow-plugins": {
+            "dealerdirect/phpcodesniffer-composer-installer": true
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true,
+    "scripts": {
+        "test": "phpunit",
+        "lint": "phpcs",
+        "format": "phpcbf --standard=phpcs-format.xml.dist",
+        "format:check": "phpcs --standard=phpcs-format.xml.dist"
+    },
+    "support": {
+        "issues": "https://github.com/arraypress/wp-money/issues",
+        "source": "https://github.com/arraypress/wp-money"
+    },
+    "extra": {
+        "branch-alias": {
+            "dev-main": "1.0.x-dev"
+        }
     }
-  },
-  "minimum-stability": "stable",
-  "prefer-stable": true,
-  "scripts": {
-    "test": "phpunit",
-    "lint": "phpcs",
-    "format": "phpcbf --standard=phpcs-format.xml.dist",
-    "format:check": "phpcs --standard=phpcs-format.xml.dist"
-  },
-  "support": {
-    "issues": "https://github.com/arraypress/wp-money/issues",
-    "source": "https://github.com/arraypress/wp-money"
-  }
 }
